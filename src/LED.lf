@@ -1,0 +1,23 @@
+target C {
+    platform: {
+      name: "rp2040",
+      board: "pololu_3pi_2040_robot"
+    },
+    threading: false,
+  }
+  preamble {=
+    #include <hardware/gpio.h>
+  =}
+  reactor LED {
+    input set:bool;
+      
+    reaction(startup) {=
+      if(set -> true)
+        lf_set(LED,false)
+    =}
+  
+    reaction(set) {=
+      if(set -> false)
+        lf_set(LED,true)
+    =}
+  }
