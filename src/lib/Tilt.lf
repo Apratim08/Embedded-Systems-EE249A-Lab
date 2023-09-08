@@ -1,0 +1,33 @@
+target C {
+    platform: {
+      name: "rp2040",
+      board: "pololu_3pi_2040_robot"
+    },
+    threading: false,
+    files: ["../../robot-lib/"],                      // Needed to find imu.h
+    cmake-include: ["../../robot-lib/robot-lib.txt"]  // Needed to find imu.h
+  }
+  
+  preamble {=
+    #include <pico/stdlib.h>
+    =}
+
+reactor Tilt {
+    input x_accel:float;
+    input y_accel:float;
+    input z_accel:float;
+    output pitch_deg:float;
+    output roll_deg:float;
+
+    input trigger: bool
+ 
+        reaction(trigger) -> pitch_deg, roll_deg {= 
+
+          lf_set(pitch_deg, atan2(-x_accel, sqrt(y_accel^2 + z_accel^2)) * 180.0 / 3.14);
+          lf_set(roll_deg, atan2(y_accel, z_accel) * 180.0 / 3.14);
+          
+        =}
+    
+       
+}
+
