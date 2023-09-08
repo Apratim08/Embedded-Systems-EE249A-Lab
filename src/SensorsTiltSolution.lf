@@ -1,4 +1,4 @@
- target C {
+target C {
     platform: "RP2040",
     threading: false,
 }
@@ -28,8 +28,8 @@ main reactor {
         // Display pitch and roll angles on the LCD
         static char buf0[17];
         static char buf1[17];
-        snprintf(buf0, 17, "Pitch: %2.2f deg", t.pitch_deg);
-        snprintf(buf1, 17, "Roll: %2.2f deg", t.roll_deg);
+        snprintf(buf0, 17, "Pitch: %2.2f deg", ti.pitch_deg);
+        snprintf(buf1, 17, "Roll: %2.2f deg", ti.roll_deg);
         lf_set(d.line0, buf0);
         lf_set(d.line1, buf1);
     =}
