@@ -1,0 +1,34 @@
+target C {
+    platform: "RP2040",
+    threading: false,
+}
+
+preamble {=
+    #include <pico/stdlib.h>
+    #include <hardware/gpio.h>
+=}
+
+main reactor {
+    timer t(0,250 ms);
+    state led_on:bool = false
+
+    reaction (startup) {=
+        gpio_init(PICO_DEFAULT_LED_PIN);
+        gpio_set_dir(PICO_DEFAULT_LED_PIN, GPIO_OUT);
+    =}
+
+    reaction(t) {=
+        self->led_on = !self->led_on;
+        printf("LED State: %b/n", self->led_on);
+        uint value = PICO_DEFAULT_LED_PIN;
+        uint32_t mask = 1ul << value;
+        uint32_t *sio_h = (uint32_t *) 0xd0000014;
+        uint32_t *clear = (uint_32 *) 0xd0000018;
+        if(self->led_on) {
+            *sio_h = mask;
+        }
+        else{
+            *clear = mask;p
+        }
+    =}
+}
