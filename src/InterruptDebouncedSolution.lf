@@ -1,0 +1,48 @@
+target C { 
+    platform: {
+        name: "rp2040",
+        board: "pololu_3pi_2040_robot"
+    },
+    threading: false,
+    keepalive: true
+}
+#import Display from "lib/Display.lf" 
+
+preamble {=
+    #include <pico/stdlib.h>
+    #include <hardware/gpio.h>
+=}
+    
+main reactor {
+    timer t(0,250 ms);
+    state last_time: interval_t = 0;
+
+       preamble {=
+       static void* action;
+       static void callback(uint gpio, uint32_t event_mask) {
+        lf_schedule(action, MSEC(1000));
+       }
+  =}
+    physical action a(200 msec)
+    reaction(startup)->a {=
+    action= a;
+    gpio_init(PICO_DEFAULT_LED_PIN);
+    gpio_set_dir(PICO_DEFAULT_LED_PIN, GPIO_IN);
+    gpio_set_irq_enabled_with_callback(
+        PICO_DEFAULT_LED_PIN,
+        GPIO_IRQ_EDGE_FALL,
+        true,
+        &callback
+        );
+    =}
+
+    reaction(a) {=
+        interval_t  elapsed_time = lf_time_physical_elapsed();
+        printf("time since last push: %11d ns \n", elapsed_time - self->last_time);
+        self->last_time = elapsed_time;
+    =}
+}
+
+
+
+
