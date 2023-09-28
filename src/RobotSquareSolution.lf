@@ -1,0 +1,60 @@
+target C {
+    platform: {
+      name: "rp2040",
+      board: "pololu_3pi_2040_robot"
+    },
+    threading: false,
+  }
+  
+  import Display from "lib/Display.lf"
+  import Motors from "lib/Motors.lf"
+  import GyroAngle from "lib/IMU.lf"
+  import AngleToDistance from "RobotEncoderSolution.lf"
+  
+  main reactor RobotSquareSolution {  
+    m = new Motors()
+    a = new AngleToDistance()
+    g = new GyroAngle()
+    display = new Display()
+    state previous_distance : float = 0
+    state previous_angle : float = 0
+
+    timer t(0, 100ms)
+
+    reaction(t) -> g.trigger {=
+      lf_set(g.trigger, true);
+    =}
+
+    reaction(startup) -> m.left_power, m.right_power, g.trigger {=
+      lf_set(m.right_power, 0.1f);
+      lf_set(m.left_power, 0.1f);
+    =}
+  
+  initial mode DRIVING {
+      reaction(a.distance_right, g.z) ->display.line0,display.line1, TURNING, m.left_power, m.right_power {=
+        if (a.distance_right->value - self->previous_distance < 50) {
+            lf_set(m.right_power, 0.1f);
+            lf_set(m.left_power, 0.1f);
+            lf_set(display.line0, "DRIVING");
+        }
+        else{
+          self->previous_angle = g.z->value;
+          lf_set_mode(TURNING);
+        }
+      =}
+    }
+  
+     mode TURNING {
+      reaction(g.z, a.distance_right) -> display.line0,display.line1, DRIVING, m.left_power, m.right_power {=     
+        if (g.z->value - self->previous_angle < 90) {
+            lf_set(m.right_power, 0.1f);
+            lf_set(m.left_power, 0);
+            lf_set(display.line0, "TURNING");           
+        }
+        else{
+          self->previous_distance = a.distance_right->value;
+          lf_set_mode(DRIVING);
+        }
+      =}
+    }
+  }
