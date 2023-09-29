@@ -1,48 +1,46 @@
-target C { 
+target C {
     platform: {
-        name: "rp2040",
-        board: "pololu_3pi_2040_robot"
+      name: "rp2040",
+      board: "pololu_3pi_2040_robot"
     },
     threading: false,
     keepalive: true
-}
-#import Display from "lib/Display.lf" 
-
-preamble {=
-    #include <pico/stdlib.h>
-    #include <hardware/gpio.h>
-=}
-    
-main reactor {
-    timer t(0,250 ms);
-    state last_time: interval_t = 0;
-
-       preamble {=
-       static void* action;
-       static void callback(uint gpio, uint32_t event_mask) {
-        lf_schedule(action, MSEC(1000));
-       }
-  =}
-    physical action a(200 msec)
-    reaction(startup)->a {=
-    action= a;
-    gpio_init(PICO_DEFAULT_LED_PIN);
-    gpio_set_dir(PICO_DEFAULT_LED_PIN, GPIO_IN);
-    gpio_set_irq_enabled_with_callback(
-        PICO_DEFAULT_LED_PIN,
-        GPIO_IRQ_EDGE_FALL,
-        true,
-        &callback
-        );
+  }
+  
+  main reactor {
+    preamble {=
+      #include "pico/stdlib.h"
+      #include "hardware/gpio.h"
+      const uint BUTTON_A_PIN = 25;
+      static void* action; 
+      int64_t last_press_time_physical = 0; 
+      int64_t last_press_time_logical = 0; 
+      const int64_t DEBOUNCE_INTERVAL = 200000000; // 200ms in nanoseconds
+  
+      void gpio_callback(uint gpio, uint32_t events) {
+        int64_t current_time = lf_time_physical(); 
+        if(current_time - last_press_time_physical > DEBOUNCE_INTERVAL) {
+          
+          if(action) {
+            lf_schedule(action, 0);
+          }
+          last_press_time_physical = current_time;
+        }
+      }
     =}
-
+  
+    physical action a
+  
+    reaction(startup) -> a {=
+      action = a; 
+      gpio_init(BUTTON_A_PIN);
+      gpio_set_dir(BUTTON_A_PIN, GPIO_IN);
+      gpio_set_irq_enabled_with_callback(BUTTON_A_PIN, GPIO_IRQ_EDGE_FALL, true, &gpio_callback);
+    =}
+  
     reaction(a) {=
-        interval_t  elapsed_time = lf_time_physical_elapsed();
-        printf("time since last push: %11d ns \n", elapsed_time - self->last_time);
-        self->last_time = elapsed_time;
+      int64_t current_time = lf_time_logical(); 
+      printf("Time since last push: %lld ms\n", (current_time - last_press_time_logical) / 1000000);
+      last_press_time_logical = current_time; 
     =}
-}
-
-
-
-
+  }
