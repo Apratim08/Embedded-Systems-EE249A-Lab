@@ -1,0 +1,133 @@
+target C {
+  platform: {
+    name: "rp2040",
+    board: "pololu_3pi_2040_robot"
+  },
+  threading: false,
+}
+
+import Encoders from "lib/Encoders.lf"
+import Display from "lib/Display.lf"
+import Motors from "lib/Motors.lf"
+import GyroAngle from "lib/IMU.lf"
+import Bump from "lib/Bump.lf"
+import Line from "lib/Line.lf"
+
+reactor Edge(calibration_time: time = 10 s, sample_period: time = 100 ms) {
+
+  preamble {=
+      int prev_distance = 0;
+      float prev_angle = 0.0;
+      int reverse_dist_l = 0;
+      int reverse_dist_r = 0;
+      bool go_left = false;
+  =}
+
+  motors  = new Motors ()
+  encoder = new Encoders()
+  gyro    = new GyroAngle()
+  bump    = new Bump()
+  disp    = new Display()
+  line    = new Line()
+
+  timer t(0, sample_period)
+  timer t2(calibration_time, 100 ms)
+    // Timer used to display seconds.
+  timer seconds(0, 1 s)
+  timer end_calibration(calibration_time)
+  state count: int = 0
+
+  reaction(startup) -> disp.line0, disp.line1, disp.line2 {=
+    lf_set(disp.line0, "CALIBRATING");
+    lf_set(disp.line1, "Roll robot over");
+    lf_set(disp.line2, "light and dark.");
+  =}
+
+  reaction(seconds) -> disp.line3 {=
+    static char buf[17];
+    snprintf(buf, 17, "time:%8d s", self->count++);
+    lf_set(disp.line3, buf);
+  =}
+
+  reaction(end_calibration) -> line.calibrate{=
+    lf_set(line.calibrate, false);
+  =}
+
+  reaction(t) -> line.trigger {=
+    lf_set(line.trigger, true);
+  =}
+  
+  reaction(t2) -> encoder.trigger, gyro.trigger {=
+    lf_set(encoder.trigger, true);
+    lf_set(gyro.trigger, true);
+  =}
+
+  initial mode MOVE_FORWARD {
+
+    reaction (encoder.left, encoder.right) -> BACK, motors.left_power, motors.right_power {=
+        
+      lf_set(motors.left_power, 0.2f);
+      lf_set(motors.right_power, 0.2f);
+      reverse_dist_l = encoder.left->value; 
+      reverse_dist_r = encoder.right->value; 
+    =}
+
+   
+   reaction(line.reflect) -> BACK {=
+      
+      if (line.reflect->value[0] > 300 || line.reflect->value[1] > 300) {
+        go_left = false;
+        lf_set_mode(BACK);
+      }
+
+      else if (line.reflect->value[3] > 300 || line.reflect->value[4] > 300) {
+        lf_set_mode(BACK);
+        go_left = true;
+      }
+      
+    =}
+  }
+  
+  mode BACK {
+    reaction (encoder.left, encoder.right) -> MOVE_FORWARD, motors.left_power, motors.right_power {=
+      float distance_l = (reverse_dist_l - encoder.left->value)*(3.175/2.0)*(3.14/180.0)*(1.0/100.0);
+      float distance_r = (reverse_dist_r - encoder.right->value)*(3.175/2.0)*(3.14/180.0)*(1.0/100.0);
+
+      if (distance_r >= 0.04) {
+        prev_distance = encoder.left->value;
+        lf_set(motors.left_power, 0.0f);
+        lf_set(motors.right_power, 0.0f);
+        lf_set_mode(MOVE_FORWARD);
+      }
+      else if (distance_l >= 0.04) {
+        prev_distance = encoder.left->value;
+        lf_set(motors.left_power, 0.0f);
+        lf_set(motors.right_power, 0.0f);
+        lf_set_mode(MOVE_FORWARD);
+      }
+      if (go_left) {
+        lf_set(motors.left_power, -0.1f);
+        lf_set(motors.right_power, -0.03f);
+       
+      } 
+      else {
+        lf_set(motors.left_power, -0.03f);
+        lf_set(motors.right_power, -0.1f);
+       
+      }
+      
+  
+    =}
+  }
+ 
+
+}
+
+
+main reactor {
+  
+  state drive:bool = true
+  square = new Edge()
+  
+
+}

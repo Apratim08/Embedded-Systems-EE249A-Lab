@@ -1,0 +1,149 @@
+target C {
+    platform: {
+      name: "rp2040",
+      board: "pololu_3pi_2040_robot"
+    },
+    threading: false,
+}
+
+import MotorsWithFeedback from "lib/MotorsWithFeedback.lf"
+import Accelerometer from "lib/IMU.lf"
+import Encoders from "lib/Encoders.lf"
+import GyroAngle from "lib/IMU.lf"
+import Display from "lib/Display.lf"
+import Line from "lib/Line.lf"
+
+
+reactor HillClimb {
+
+    preamble {=
+        #include <math.h>
+        int prev_distance = 0;
+        float prev_angle = 0.0;
+        float initial_y = 0.0;
+        float prev_a = 0.0;
+        float go_up = false;
+        float angle_offset = 0.0;
+    =}
+
+    line    = new Line()
+    motors  = new MotorsWithFeedback ()
+    encoder = new Encoders()
+    gyro    = new GyroAngle()
+    a = new Accelerometer()
+    disp    = new Display()
+  
+    timer t(0, 100 ms)
+
+    encoder.left -> motors.left;
+    encoder.right -> motors.right;
+
+    reaction(t) -> encoder.trigger, gyro.trigger, a.trigger {=
+      lf_set(encoder.trigger, true);
+      lf_set(gyro.trigger, true);
+      lf_set(a.trigger, true);
+    =}
+    
+    initial mode START {
+        reaction(startup) -> FIND_UP, motors.left_speed, motors.right_speed {=
+            
+            lf_set(motors.left_speed, -0.07f);
+            lf_set(motors.right_speed, 0.07f);
+            lf_set_mode(FIND_UP);
+        =}
+    }
+
+    mode FIND_UP {
+        reaction (a.x, a.z, a.y, gyro.z) -> ADJUST, MOVE_UP, motors.left_speed, motors.right_speed {=
+            
+            if(a.x->value > 0.3 && (a.y->value > -0.05 && a.y->value < 0.05)) {
+                lf_set(motors.left_speed, 0.0f);
+                lf_set(motors.right_speed, 0.0f);
+                go_up = true;
+                angle_offset = gyro.z->value;
+                lf_set_mode(ADJUST); 
+            } 
+        =}
+    
+        
+    }
+    mode ADJUST {
+        reaction (gyro.x) -> MOVE_UP, MOVE_DOWN, motors.left_speed, motors.right_speed {=
+            lf_set(motors.left_speed, 0.2f);
+            lf_set(motors.right_speed, 0.0f);
+            if (go_up) {
+                lf_set_mode(MOVE_UP);
+                go_up = false;
+            } else {
+                lf_set_mode(MOVE_DOWN);
+            }
+        =}
+    }
+    mode MOVE_UP {
+        reaction (a.x, a.y, a.z, gyro.z) -> START, TURN, motors.left_speed, motors.right_speed {=
+        
+            if (a.y->value < -0.01) {
+                lf_set(motors.left_speed, 0.2f);
+                lf_set(motors.right_speed, 0.17f);
+            } else if (a.y->value> 0.01) {
+                lf_set(motors.left_speed, 0.17f);
+                lf_set(motors.right_speed, 0.2f);
+            } else {
+                lf_set(motors.left_speed, 0.2f);
+                lf_set(motors.right_speed, 0.2f);
+            }
+
+            if ((a.x->value  > -0.1 && a.x->value < 0.1) && (a.y->value < 0.01)) {
+                lf_set_mode(TURN);
+                prev_angle = gyro.z->value;
+                
+                lf_set(motors.left_speed, -0.1f);
+                lf_set(motors.right_speed, 0.1f);
+            }
+
+        =}
+     
+    }
+    
+    mode TURN {
+        reaction (gyro.z) -> MOVE_DOWN, motors.left_speed, motors.right_speed {=
+                
+            float current_angle = (float) gyro.z->value; // left gyro.z increases, right gyro.z decreases
+            if ((current_angle - prev_angle) >= 150.0) {  
+               
+                lf_set(motors.left_speed, 0.2f);
+                lf_set(motors.right_speed, 0.0f);
+                lf_set_mode(MOVE_DOWN);
+                angle_offset = gyro.z->value;
+                prev_angle = current_angle;
+            }
+        =}
+    }
+
+
+    mode MOVE_DOWN {
+        reaction (a.y) -> TURN, motors.left_speed, motors.right_speed {=
+           
+            if (a.y->value > 0.02) {
+                lf_set(motors.left_speed, 0.14f);
+                lf_set(motors.right_speed, 0.11f);
+            } else if (a.y->value < -0.02) {
+                lf_set(motors.left_speed, 0.11f);
+                lf_set(motors.right_speed, 0.14f);
+            } else {
+                lf_set(motors.left_speed, 0.14f);
+                lf_set(motors.right_speed, 0.14f);
+            }
+
+        =}
+
+    }
+    
+   
+
+}
+
+main reactor {
+
+    square = new HillClimb()
+}
