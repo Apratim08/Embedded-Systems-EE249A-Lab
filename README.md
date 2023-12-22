@@ -1,6 +1,8 @@
 # Lingua Franca RP2040 Lab Work in EE149 Course at UC Berkeley
 This repo is a [Lingua Franca](https://www.lf-lang.org/) (LF) projects using the bare metal RP2040 target platform such as found on the [Raspberry Pi Pico board](https://www.raspberrypi.com/products/raspberry-pi-pico/) and the [Pololu 3pi+ 2040 robot](https://www.pololu.com/docs/0J86).
 
+This repo contains the coding work done in Lab and all the solutions from Lab 0-Lab 5 (refer https://www.lf-lang.org).
+
 The repo supports MacOS, Linux, and Windows through [WSL](https://learn.microsoft.com/en-us/windows/wsl/install).
 To support RP2040-based boards, the repo uses the [Pico SDK](https://github.com/raspberrypi/pico-sdk/tree/master) as a submodule.
 It also includes some code from the [pololu-3pi-2040-robot library](https://github.com/pololu/pololu-3pi-2040-robot/tree/master) by DavidEGrayson.
