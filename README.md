@@ -1,7 +1,6 @@
-# Template for the Lingua Franca RP2040 target platform
-This repo is a template for [Lingua Franca](https://www.lf-lang.org/) (LF) projects using the bare metal RP2040 target platform such as found on the [Raspberry Pi Pico board](https://www.raspberrypi.com/products/raspberry-pi-pico/) and the [Pololu 3pi+ 2040 robot](https://www.pololu.com/docs/0J86).
+# Lingua Franca RP2040 target platform
+This repo is a [Lingua Franca](https://www.lf-lang.org/) (LF) projects using the bare metal RP2040 target platform such as found on the [Raspberry Pi Pico board](https://www.raspberrypi.com/products/raspberry-pi-pico/) and the [Pololu 3pi+ 2040 robot](https://www.pololu.com/docs/0J86).
 This template is particularly well suited for the [LF Embedded Lab](https://www.lf-lang.org/lf-embedded-lab/) exercises.
-Students should create a repository using this template and record their work within their repo.
 
 The repo supports MacOS, Linux, and Windows through [WSL](https://learn.microsoft.com/en-us/windows/wsl/install).
 To support RP2040-based boards, the repo uses the [Pico SDK](https://github.com/raspberrypi/pico-sdk/tree/master) as a submodule.
